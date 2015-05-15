@@ -9,7 +9,7 @@
 #
 
 import os
-import pickle
+import dill as pickle
 import sys
 import runpy
 import types
