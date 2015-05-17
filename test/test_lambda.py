@@ -1,5 +1,5 @@
 import unittest
-from mp2.pool import Pool
+from multiprocessing_on_dill.pool import Pool
 
 def square(x):
     return x*x
