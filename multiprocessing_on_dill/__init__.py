@@ -15,6 +15,9 @@
 import sys
 from . import context
 
+# The version of the Python standard library from which multiprocessing was forked
+__version__ = '3.5.0a4'
+
 #
 # Copy stuff from default context
 #
