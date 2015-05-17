@@ -35,13 +35,13 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version=find_version("segpy/__init__.py"),
+    version=find_version("multiprocessing_on_dill/__init__.py"),
 
     description='A friendly fork of multiprocessing which uses dill instead of pickle',
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/rob-smallshire/segpy',
+    url='https://github.com/sixty-north/multiprocessing_on_dill',
 
     # Author details
     author='Robert Smallshire',
