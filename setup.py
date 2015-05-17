@@ -26,7 +26,7 @@ def find_version(*file_paths):
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the relevant file
-with open(path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
+with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
@@ -37,7 +37,7 @@ setup(
     # https://packaging.python.org/en/latest/single_source_version.html
     version=find_version("segpy/__init__.py"),
 
-    description='Transfer of seismic data to and from SEG Y files',
+    description='A friendly fork of multiprocessing which uses dill instead of pickle',
     long_description=long_description,
 
     # The project's main homepage.
@@ -45,10 +45,10 @@ setup(
 
     # Author details
     author='Robert Smallshire',
-    author_email='robert@smallshire.org.uk',
+    author_email='rob@sixty-north.com',
 
     # Choose your license
-    license='GPL',
+    license='PSFL',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -60,8 +60,7 @@ setup(
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
-        'Topic :: Scientific/Engineering',
-        'Topic :: Software Development :: Libraries',
+        'Topic :: Software Development :: Libraries :: Python Modules',
 
         # Pick your license as you wish (should match "license" above)
         'License :: OSI Approved :: Python Software Foundation License',
@@ -75,7 +74,7 @@ setup(
     ],
 
     # What does your project relate to?
-    keywords='seismic geocomputing geophysics',
+    keywords='multiprocessing parallel',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
@@ -85,15 +84,13 @@ setup(
     # project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=[],
+    install_requires=['dill'],
 
     # List additional groups of dependencies here (e.g. development dependencies).
     # You can install these using the following syntax, for example:
     # $ pip install -e .[dev,test]
     extras_require = {
         'dev': ['check-manifest', 'wheel'],
-        'doc': ['sphinx', 'cartouche'],
-        'test': ['coverage', 'hypothesis'],
     },
 
     # If there are data files included in your packages that need to be
