@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/mp2.iml" filepath="$PROJECT_DIR$/.idea/mp2.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../multiprocessing_on_dill/.idea/multiprocessing_on_dill.iml" filepath="$PROJECT_DIR$/../multiprocessing_on_dill/.idea/multiprocessing_on_dill.iml" />
     </modules>
   </component>
 </project>
