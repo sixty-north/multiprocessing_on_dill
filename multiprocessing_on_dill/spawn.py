@@ -2,20 +2,20 @@
 # Code used to start processes when using the spawn or forkserver
 # start methods.
 #
-# multiprocessing/spawn.py
+# multiprocessing_on_dill/spawn.py
 #
 # Copyright (c) 2006-2008, R Oudkerk
 # Licensed to PSF under a Contributor Agreement.
 #
 
 import os
-import dill as pickle
 import sys
 import runpy
 import types
 
 from . import get_start_method, set_start_method
 from . import process
+from .context import reduction
 from . import util
 
 __all__ = ['_main', 'freeze_support', 'set_executable', 'get_executable',
@@ -53,7 +53,7 @@ def is_forking(argv):
     '''
     Return whether commandline indicates we are forking
     '''
-    if len(argv) >= 2 and argv[1] == '--multiprocessing-fork':
+    if len(argv) >= 2 and argv[1] == '--multiprocessing_on_dill-fork':
         return True
     else:
         return False
@@ -80,24 +80,23 @@ def get_command_line(**kwds):
     Returns prefix of command line used for spawning a child process
     '''
     if getattr(sys, 'frozen', False):
-        return ([sys.executable, '--multiprocessing-fork'] +
+        return ([sys.executable, '--multiprocessing_on_dill-fork'] +
                 ['%s=%r' % item for item in kwds.items()])
     else:
-        prog = 'from multiprocessing.spawn import spawn_main; spawn_main(%s)'
+        prog = 'from multiprocessing_on_dill.spawn import spawn_main; spawn_main(%s)'
         prog %= ', '.join('%s=%r' % item for item in kwds.items())
         opts = util._args_from_interpreter_flags()
-        return [_python_exe] + opts + ['-c', prog, '--multiprocessing-fork']
+        return [_python_exe] + opts + ['-c', prog, '--multiprocessing_on_dill-fork']
 
 
 def spawn_main(pipe_handle, parent_pid=None, tracker_fd=None):
     '''
-    Run code specifed by data received over pipe
+    Run code specified by data received over pipe
     '''
-    assert is_forking(sys.argv)
+    assert is_forking(sys.argv), "Not forking"
     if sys.platform == 'win32':
         import msvcrt
-        from .reduction import steal_handle
-        new_handle = steal_handle(parent_pid, pipe_handle)
+        new_handle = reduction.steal_handle(parent_pid, pipe_handle)
         fd = msvcrt.open_osfhandle(new_handle, os.O_RDONLY)
     else:
         from . import semaphore_tracker
@@ -111,9 +110,9 @@ def _main(fd):
     with os.fdopen(fd, 'rb', closefd=True) as from_parent:
         process.current_process()._inheriting = True
         try:
-            preparation_data = pickle.load(from_parent)
+            preparation_data = reduction.pickle.load(from_parent)
             prepare(preparation_data)
-            self = pickle.load(from_parent)
+            self = reduction.pickle.load(from_parent)
         finally:
             del process.current_process()._inheriting
     return self._bootstrap()
@@ -218,14 +217,14 @@ def prepare(data):
         process.ORIGINAL_DIR = data['orig_dir']
 
     if 'start_method' in data:
-        set_start_method(data['start_method'])
+        set_start_method(data['start_method'], force=True)
 
     if 'init_main_from_name' in data:
         _fixup_main_from_name(data['init_main_from_name'])
     elif 'init_main_from_path' in data:
         _fixup_main_from_path(data['init_main_from_path'])
 
-# Multiprocessing module helpers to fix up the main module in
+# multiprocessing_on_dill module helpers to fix up the main module in
 # spawned subprocesses
 def _fixup_main_from_name(mod_name):
     # __main__.py files for packages, directories, zip archives, etc, run

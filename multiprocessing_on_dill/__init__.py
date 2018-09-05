@@ -1,11 +1,11 @@
 #
 # Package analogous to 'threading.py' but using processes
 #
-# multiprocessing/__init__.py
+# multiprocessing_on_dill/__init__.py
 #
 # This package is intended to duplicate the functionality (and much of
 # the API) of threading.py but uses processes instead of threads.  A
-# subpackage 'multiprocessing.dummy' has the same API but is a simple
+# subpackage 'multiprocessing_on_dill.dummy' has the same API but is a simple
 # wrapper for 'threading'.
 #
 # Copyright (c) 2006-2008, R Oudkerk
@@ -14,9 +14,6 @@
 
 import sys
 from . import context
-
-# The version of the Python standard library from which multiprocessing was forked
-__version__ = '3.5.0a4'
 
 #
 # Copy stuff from default context

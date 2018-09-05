@@ -1,12 +1,13 @@
 #
 # Module which deals with pickling of objects.
 #
-# multiprocessing/reduction.py
+# multiprocessing_on_dill/reduction.py
 #
 # Copyright (c) 2006-2008, R Oudkerk
 # Licensed to PSF under a Contributor Agreement.
 #
 
+from abc import ABCMeta
 import copyreg
 import functools
 import io
@@ -30,7 +31,7 @@ HAVE_SEND_HANDLE = (sys.platform == 'win32' or
 #
 
 class ForkingPickler(pickle.Pickler):
-    '''Pickler subclass used by multiprocessing.'''
+    '''Pickler subclass used by multiprocessing_on_dill.'''
     _extra_reducers = {}
     _copyreg_dispatch_table = copyreg.dispatch_table
 
@@ -164,7 +165,10 @@ else:
                 if len(cmsg_data) % a.itemsize != 0:
                     raise ValueError
                 a.frombytes(cmsg_data)
-                assert len(a) % 256 == msg[0]
+                if len(a) % 256 != msg[0]:
+                    raise AssertionError(
+                        "Len is {0:n} but msg[0] is {1!r}".format(
+                            len(a), msg[0]))
                 return list(a)
         except (ValueError, IndexError):
             pass
@@ -238,3 +242,36 @@ else:
         fd = df.detach()
         return socket.socket(family, type, proto, fileno=fd)
     register(socket.socket, _reduce_socket)
+
+
+class AbstractReducer(metaclass=ABCMeta):
+    '''Abstract base class for use in implementing a Reduction class
+    suitable for use in replacing the standard reduction mechanism
+    used in multiprocessing_on_dill.'''
+    ForkingPickler = ForkingPickler
+    register = register
+    dump = dump
+    send_handle = send_handle
+    recv_handle = recv_handle
+
+    if sys.platform == 'win32':
+        steal_handle = steal_handle
+        duplicate = duplicate
+        DupHandle = DupHandle
+    else:
+        sendfds = sendfds
+        recvfds = recvfds
+        DupFd = DupFd
+
+    _reduce_method = _reduce_method
+    _reduce_method_descriptor = _reduce_method_descriptor
+    _rebuild_partial = _rebuild_partial
+    _reduce_socket = _reduce_socket
+    _rebuild_socket = _rebuild_socket
+
+    def __init__(self, *args):
+        register(type(_C().f), _reduce_method)
+        register(type(list.append), _reduce_method_descriptor)
+        register(type(int.__add__), _reduce_method_descriptor)
+        register(functools.partial, _reduce_partial)
+        register(socket.socket, _reduce_socket)
