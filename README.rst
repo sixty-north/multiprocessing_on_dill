@@ -1,6 +1,8 @@
 Multiprocessing on Dill
 =======================
 
+**Authors**: Robert Smallshire (rob@sixty-north.com) (initial version), Juan Carlos Rocamonde (juancarlosrocamonde@gmail.com) (3.7 version).
+
 This project is a friendly fork – for Python 3 – of the Python Standard Library `multiprocessing
 <https://docs.python.org/3/library/multiprocessing.html>`_ module, which uses the third-party
 `dill <https://pypi.python.org/pypi/dill>`_ serializer instead of the standard ``pickle`` serializer.  This overcomes
