@@ -1,7 +1,7 @@
 #
 # A higher level module for using sockets (or Windows named pipes)
 #
-# multiprocessing/connection.py
+# multiprocessing_on_dill/connection.py
 #
 # Copyright (c) 2006-2008, R Oudkerk
 # Licensed to PSF under a Contributor Agreement.
@@ -20,11 +20,11 @@ import itertools
 
 import _multiprocessing
 
-from . import reduction
 from . import util
 
 from . import AuthenticationError, BufferTooShort
-from .reduction import ForkingPickler
+from .context import reduction
+_ForkingPickler = reduction.ForkingPickler
 
 try:
     import _winapi
@@ -203,7 +203,7 @@ class _ConnectionBase:
         """Send a (picklable) object"""
         self._check_closed()
         self._check_writable()
-        self._send_bytes(ForkingPickler.dumps(obj))
+        self._send_bytes(_ForkingPickler.dumps(obj))
 
     def recv_bytes(self, maxlength=None):
         """
@@ -248,7 +248,7 @@ class _ConnectionBase:
         self._check_closed()
         self._check_readable()
         buf = self._recv_bytes()
-        return ForkingPickler.loads(buf.getbuffer())
+        return _ForkingPickler.loads(buf.getbuffer())
 
     def poll(self, timeout=0.0):
         """Whether there is any input available to be read"""
@@ -397,7 +397,7 @@ class Connection(_ConnectionBase):
             self._send(header)
             self._send(buf)
         else:
-            # Issue # 20540: concatenate before sending, to avoid delays due
+            # Issue #20540: concatenate before sending, to avoid delays due
             # to Nagle's algorithm on a TCP socket.
             # Also note we want to avoid sending a 0-length buffer separately,
             # to avoid "broken pipe" errors if the other end closed the pipe.
@@ -465,8 +465,13 @@ class Listener(object):
             self._listener = None
             listener.close()
 
-    address = property(lambda self: self._listener._address)
-    last_accepted = property(lambda self: self._listener._last_accepted)
+    @property
+    def address(self):
+        return self._listener._address
+
+    @property
+    def last_accepted(self):
+        return self._listener._last_accepted
 
     def __enter__(self):
         return self
@@ -715,7 +720,9 @@ FAILURE = b'#FAILURE#'
 
 def deliver_challenge(connection, authkey):
     import hmac
-    assert isinstance(authkey, bytes)
+    if not isinstance(authkey, bytes):
+        raise ValueError(
+            "Authkey must be bytes, not {0!s}".format(type(authkey)))
     message = os.urandom(MESSAGE_LENGTH)
     connection.send_bytes(CHALLENGE + message)
     digest = hmac.new(authkey, message, 'md5').digest()
@@ -728,7 +735,9 @@ def deliver_challenge(connection, authkey):
 
 def answer_challenge(connection, authkey):
     import hmac
-    assert isinstance(authkey, bytes)
+    if not isinstance(authkey, bytes):
+        raise ValueError(
+            "Authkey must be bytes, not {0!s}".format(type(authkey)))
     message = connection.recv_bytes(256)         # reject large message
     assert message[:len(CHALLENGE)] == CHALLENGE, 'message = %r' % message
     message = message[len(CHALLENGE):]

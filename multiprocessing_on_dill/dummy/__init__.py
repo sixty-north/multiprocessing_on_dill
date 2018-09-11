@@ -1,7 +1,7 @@
 #
-# Support for the API of the multiprocessing package using threads
+# Support for the API of the multiprocessing_on_dill package using threads
 #
-# multiprocessing/dummy/__init__.py
+# multiprocessing_on_dill/dummy/__init__.py
 #
 # Copyright (c) 2006-2008, R Oudkerk
 # Licensed to PSF under a Contributor Agreement.

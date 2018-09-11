@@ -1,7 +1,7 @@
 #
-# Analogue of `multiprocessing.connection` which uses queues instead of sockets
+# Analogue of `multiprocessing_on_dill.connection` which uses queues instead of sockets
 #
-# multiprocessing/dummy/connection.py
+# multiprocessing_on_dill/dummy/connection.py
 #
 # Copyright (c) 2006-2008, R Oudkerk
 # Licensed to PSF under a Contributor Agreement.

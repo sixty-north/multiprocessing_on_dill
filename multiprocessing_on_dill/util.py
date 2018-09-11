@@ -1,7 +1,7 @@
 #
 # Module providing various facilities to other parts of the package
 #
-# multiprocessing/util.py
+# multiprocessing_on_dill/util.py
 #
 # Copyright (c) 2006-2008, R Oudkerk
 # Licensed to PSF under a Contributor Agreement.
@@ -9,10 +9,11 @@
 
 import os
 import itertools
+import sys
 import weakref
 import atexit
 import threading        # we want threading to install it's
-                        # cleanup function before multiprocessing does
+                        # cleanup function before multiprocessing_on_dill does
 from subprocess import _args_from_interpreter_flags
 
 from . import process
@@ -34,7 +35,7 @@ DEBUG = 10
 INFO = 20
 SUBWARNING = 25
 
-LOGGER_NAME = 'multiprocessing'
+LOGGER_NAME = 'multiprocessing_on_dill'
 DEFAULT_LOGGING_FORMAT = '[%(levelname)s/%(processName)s] %(message)s'
 
 _logger = None
@@ -58,7 +59,7 @@ def sub_warning(msg, *args):
 
 def get_logger():
     '''
-    Returns logger used by multiprocessing
+    Returns logger used by multiprocessing_on_dill
     '''
     global _logger
     import logging
@@ -70,7 +71,7 @@ def get_logger():
             _logger = logging.getLogger(LOGGER_NAME)
             _logger.propagate = 0
 
-            # XXX multiprocessing should cleanup before logging
+            # XXX multiprocessing_on_dill should cleanup before logging
             if hasattr(atexit, 'unregister'):
                 atexit.unregister(_exit_function)
                 atexit.register(_exit_function)
@@ -148,12 +149,15 @@ class Finalize(object):
     Class which supports object finalization using weakrefs
     '''
     def __init__(self, obj, callback, args=(), kwargs=None, exitpriority=None):
-        assert exitpriority is None or type(exitpriority) is int
+        if (exitpriority is not None) and not isinstance(exitpriority,int):
+            raise TypeError(
+                "Exitpriority ({0!r}) must be None or int, not {1!s}".format(
+                    exitpriority, type(exitpriority)))
 
         if obj is not None:
             self._weakref = weakref.ref(obj, self)
-        else:
-            assert exitpriority is not None
+        elif exitpriority is None:
+            raise ValueError("Without object, exitpriority cannot be None")
 
         self._callback = callback
         self._args = args
@@ -240,20 +244,28 @@ def _run_finalizers(minpriority=None):
         return
 
     if minpriority is None:
-        f = lambda p : p[0][0] is not None
+        f = lambda p : p[0] is not None
     else:
-        f = lambda p : p[0][0] is not None and p[0][0] >= minpriority
+        f = lambda p : p[0] is not None and p[0] >= minpriority
 
-    items = [x for x in list(_finalizer_registry.items()) if f(x)]
-    items.sort(reverse=True)
+    # Careful: _finalizer_registry may be mutated while this function
+    # is running (either by a GC run or by another thread).
 
-    for key, finalizer in items:
-        sub_debug('calling %s', finalizer)
-        try:
-            finalizer()
-        except Exception:
-            import traceback
-            traceback.print_exc()
+    # list(_finalizer_registry) should be atomic, while
+    # list(_finalizer_registry.items()) is not.
+    keys = [key for key in list(_finalizer_registry) if f(key)]
+    keys.sort(reverse=True)
+
+    for key in keys:
+        finalizer = _finalizer_registry.get(key)
+        # key may have been removed from the registry
+        if finalizer is not None:
+            sub_debug('calling %s', finalizer)
+            try:
+                finalizer()
+            except Exception:
+                import traceback
+                traceback.print_exc()
 
     if minpriority is None:
         _finalizer_registry.clear()
@@ -356,6 +368,42 @@ def close_all_fds_except(fds):
     assert fds[-1] == MAXFD, 'fd too large'
     for i in range(len(fds) - 1):
         os.closerange(fds[i]+1, fds[i+1])
+#
+# Close sys.stdin and replace stdin with os.devnull
+#
+
+def _close_stdin():
+    if sys.stdin is None:
+        return
+
+    try:
+        sys.stdin.close()
+    except (OSError, ValueError):
+        pass
+
+    try:
+        fd = os.open(os.devnull, os.O_RDONLY)
+        try:
+            sys.stdin = open(fd, closefd=False)
+        except:
+            os.close(fd)
+            raise
+    except (OSError, ValueError):
+        pass
+
+#
+# Flush standard streams, if any
+#
+
+def _flush_std_streams():
+    try:
+        sys.stdout.flush()
+    except (AttributeError, ValueError):
+        pass
+    try:
+        sys.stderr.flush()
+    except (AttributeError, ValueError):
+        pass
 
 #
 # Start a program with only specified fds kept open
@@ -363,7 +411,7 @@ def close_all_fds_except(fds):
 
 def spawnv_passfds(path, args, passfds):
     import _posixsubprocess
-    passfds = sorted(passfds)
+    passfds = tuple(sorted(map(int, passfds)))
     errpipe_read, errpipe_write = os.pipe()
     try:
         return _posixsubprocess.fork_exec(
